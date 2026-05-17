@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Daily Manager">
+<title>Daily Manager</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'Georgia', serif;
+    background: #F7F5F2;
+    color: #2A2420;
+    min-height: 100vh;
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  /* Header */
+  #header {
+    padding: 52px 22px 18px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    transition: background 0.4s;
+  }
+  #header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+  #day-label-small {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.72);
+    margin-bottom: 3px;
+  }
+  #day-label-big {
+    font-size: 24px;
+    color: #fff;
+    letter-spacing: -0.4px;
+  }
+  #clock-wrap { text-align: right; }
+  #clock { font-size: 20px; color: #fff; }
+  #done-count { font-size: 11px; color: rgba(255,255,255,0.68); margin-top: 2px; }
+  #progress-bar-track {
+    background: rgba(255,255,255,0.25);
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  #progress-bar-fill {
+    height: 100%;
+    background: #fff;
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+  #progress-label { font-size: 11px; color: rgba(255,255,255,0.72); letter-spacing: 0.04em; }
+
+  /* Mode switcher */
+  #mode-switcher {
+    display: flex;
+    gap: 8px;
+    padding: 14px 18px;
+    background: #fff;
+    border-bottom: 1px solid #EAE6E1;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 10px 6px;
+    border-radius: 10px;
+    border: 2px solid #E8E4DF;
+    background: #F7F5F2;
+    color: #999;
+    font-family: Georgia, serif;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .mode-btn .mode-icon { font-size: 18px; display: block; margin-bottom: 3px; }
+  .mode-btn.active { color: #2A2420; }
+
+  /* Legend */
+  #legend {
+    display: flex;
+    gap: 12px;
+    padding: 10px 18px;
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .legend-label { font-size: 10px; color: #999; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  /* Blocks */
+  #blocks { padding: 4px 14px 48px; }
+  .block {
+    background: #fff;
+    border-radius: 14px;
+    margin-bottom: 11px;
+    overflow: hidden;
+    border: 1px solid #EAE6E1;
+    transition: opacity 0.3s;
+  }
+  .block.all-done { opacity: 0.65; background: #F0F0EC; border-color: #DDD; }
+  .block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 13px 14px 9px;
+    border-left: 4px solid #ccc;
+  }
+  .block-time { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 2px; }
+  .block-name { font-size: 15px; letter-spacing: -0.2px; }
+  .block-count {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .block-tasks { padding: 2px 14px 13px; border-left: 4px solid #ccc; }
+  .task-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #F0EDE8;
+    cursor: pointer;
+    user-select: none;
+  }
+  .task-row:last-child { border-bottom: none; }
+  .task-check {
+    width: 20px; height: 20px;
+    border-radius: 6px;
+    border: 2px solid #D8D4CF;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    font-size: 12px; color: #fff;
+  }
+  .task-check.done { border-color: transparent; }
+  .task-label { font-size: 14px; letter-spacing: 0.01em; transition: all 0.2s; }
+  .task-label.done { color: #AAA; text-decoration: line-through; }
+
+  #footer { text-align: center; padding: 0 24px 28px; font-size: 12px; color: #BBB; font-style: italic; line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div id="header-top">
+    <div>
+      <div id="day-label-small">Daily Manager</div>
+      <div id="day-label-big"></div>
+    </div>
+    <div id="clock-wrap">
+      <div id="clock"></div>
+      <div id="done-count"></div>
+    </div>
+  </div>
+  <div id="progress-bar-track"><div id="progress-bar-fill"></div></div>
+  <div id="progress-label"></div>
+</div>
+
+<div id="mode-switcher">
+  <button class="mode-btn active" data-mode="wfh" onclick="setMode('wfh')">
+    <span class="mode-icon">🏠</span>WFH
+  </button>
+  <button class="mode-btn" data-mode="office" onclick="setMode('office')">
+    <span class="mode-icon">🏢</span>Office
+  </button>
+  <button class="mode-btn" data-mode="weekend" onclick="setMode('weekend')">
+    <span class="mode-icon">🌿</span>Weekend
+  </button>
+</div>
+
+<div id="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#E8875A"></div><span class="legend-label">Hygiene</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#5A9E7A"></div><span class="legend-label">Home</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#5A6BAE"></div><span class="legend-label">Work</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#9B7BC4"></div><span class="legend-label">Personal</span></div>
+</div>
+
+<div id="blocks"></div>
+<div id="footer">Progress over perfection.<br>One block at a time.</div>
+
+<script>
+const DAYS = {
+  wfh: {
+    label: "🏠 WFH Day", color: "#7C9E8F",
+    blocks: [
+      { time: "7:00–7:45", label: "Morning Foundation", type: "hygiene",
+        tasks: ["Brush teeth + face wash", "Shower", "Get dressed (properly)", "Deodorant + skincare"] },
+      { time: "7:45–8:15", label: "Fuel Up", type: "home",
+        tasks: ["Breakfast", "Water (500ml)", "Make bed + clear dishes"] },
+      { time: "8:15–12:30", label: "Deep Work Block 1", type: "work",
+        tasks: ["Check messages (15 min max)", "Priority task #1", "Priority task #2"] },
+      { time: "12:30–13:15", label: "Reset Break", type: "home",
+        tasks: ["Lunch away from desk", "5 min walk or stretch", "Quick surface tidy"] },
+      { time: "13:15–17:30", label: "Deep Work Block 2", type: "work",
+        tasks: ["Emails / comms", "Priority task #3", "EOD wrap — tomorrow's top 3"] },
+      { time: "17:30–18:30", label: "Transition + Chores", type: "home",
+        tasks: ["Laundry (start or fold)", "Vacuum or wipe surfaces", "Trash check"] },
+      { time: "18:30–20:00", label: "Personal Time", type: "personal",
+        tasks: ["Dinner", "Decompress — no guilt"] },
+      { time: "21:30–22:00", label: "Wind Down", type: "hygiene",
+        tasks: ["Brush teeth + skincare", "Lay out tomorrow's clothes", "Phone away"] },
+    ]
+  },
+  office: {
+    label: "🏢 Office + Gym", color: "#8B7BAB",
+    blocks: [
+      { time: "7:00–7:50", label: "Morning Foundation", type: "hygiene",
+        tasks: ["Brush teeth + face wash", "Shower", "Get dressed", "Deodorant + skincare", "Pack gym bag"] },
+      { time: "7:50–8:20", label: "Fuel Up & Go", type: "home",
+        tasks: ["Quick breakfast", "Water bottle filled", "Bag checked"] },
+      { time: "8:20–17:30", label: "Office", type: "work",
+        tasks: ["Arrive on time", "Focused deep work", "Lunch break (away from desk)"] },
+      { time: "17:30–19:00", label: "Gym", type: "personal",
+        tasks: ["Show up — that's the hardest part", "Workout", "Shower at gym"] },
+      { time: "19:00–20:00", label: "Home Recovery", type: "home",
+        tasks: ["Dinner", "Bag unpacked + gym kit in wash"] },
+      { time: "20:00–21:30", label: "Gentle Chore Window", type: "home",
+        tasks: ["One chore only — don't overdo it", "Tidy kitchen", "Prep for tomorrow"] },
+      { time: "21:30–22:00", label: "Wind Down", type: "hygiene",
+        tasks: ["Skincare", "Lay out tomorrow's clothes", "Phone away"] },
+    ]
+  },
+  weekend: {
+    label: "🌿 Weekend", color: "#C4956A",
+    blocks: [
+      { time: "8:00–9:00", label: "Slow Morning", type: "hygiene",
+        tasks: ["No alarm guilt", "Brush teeth + face wash", "Shower (take your time)", "Real breakfast"] },
+      { time: "9:00–11:00", label: "Big Chore Block", type: "home",
+        tasks: ["Laundry", "Vacuum + mop", "Bathroom clean", "Fridge / pantry check"] },
+      { time: "11:00–13:00", label: "Free Block", type: "personal",
+        tasks: ["Whatever you want — protect this"] },
+      { time: "13:00–14:00", label: "Lunch + Reset", type: "home",
+        tasks: ["Proper lunch", "Quick surface tidy"] },
+      { time: "14:00–17:00", label: "Life Admin", type: "work",
+        tasks: ["Groceries", "Errands", "Reply to messages you've been avoiding"] },
+      { time: "17:00–20:00", label: "Recharge", type: "personal",
+        tasks: ["Social / solo — your call", "Dinner"] },
+      { time: "21:00–21:30", label: "Week Prep", type: "hygiene",
+        tasks: ["Lay out Monday clothes", "Check week calendar", "Skincare + brush teeth"] },
+    ]
+  }
+};
+
+const TYPE = {
+  hygiene: { bg: "#FFF0E6", dot: "#E8875A" },
+  home:    { bg: "#E8F4EE", dot: "#5A9E7A" },
+  work:    { bg: "#EEF0F8", dot: "#5A6BAE" },
+  personal:{ bg: "#F5F0FA", dot: "#9B7BC4" },
+};
+
+let mode = "wfh";
+let state = {};
+
+function todayKey() { return new Date().toISOString().slice(0, 10); }
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem("dm_state");
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (parsed.date !== todayKey()) return {}; // Reset daily
+    return parsed.checked || {};
+  } catch { return {}; }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem("dm_state", JSON.stringify({ date: todayKey(), checked: state }));
+  } catch {}
+}
+
+function toggleTask(mode, bi, ti) {
+  const key = `${mode}-${bi}-${ti}`;
+  state[key] = !state[key];
+  saveState();
+  render();
+}
+
+function isChecked(m, bi, ti) { return !!state[`${m}-${bi}-${ti}`]; }
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById("clock").textContent =
+    now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll(".mode-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.mode === m);
+    const day = DAYS[b.dataset.mode];
+    b.style.borderColor = b.dataset.mode === m ? day.color : "#E8E4DF";
+    b.style.background = b.dataset.mode === m ? lighten(day.color) : "#F7F5F2";
+  });
+  render();
+}
+
+function lighten(hex) {
+  // Simple lightening for accent bg
+  const map = { "#7C9E8F": "#B8D4C8", "#8B7BAB": "#C9C0E0", "#C4956A": "#E8D5C0" };
+  return map[hex] || "#EEE";
+}
+
+function render() {
+  const day = DAYS[mode];
+  document.getElementById("header").style.background = day.color;
+  document.getElementById("day-label-big").textContent = day.label;
+
+  const totalTasks = day.blocks.reduce((a, b) => a + b.tasks.length, 0);
+  const doneTasks = day.blocks.reduce((a, b, bi) =>
+    a + b.tasks.filter((_, ti) => isChecked(mode, bi, ti)).length, 0);
+  const pct = totalTasks ? Math.round((doneTasks / totalTasks) * 100) : 0;
+
+  document.getElementById("progress-bar-fill").style.width = pct + "%";
+  document.getElementById("done-count").textContent = `${doneTasks}/${totalTasks} done`;
+  document.getElementById("progress-label").textContent =
+    pct === 0 ? "Let's go." : pct < 50 ? "Building momentum." : pct < 100 ? "You're doing it." : "Day owned. 🎯";
+
+  const container = document.getElementById("blocks");
+  container.innerHTML = "";
+
+  day.blocks.forEach((block, bi) => {
+    const tc = TYPE[block.type];
+    const blockDone = block.tasks.filter((_, ti) => isChecked(mode, bi, ti)).length;
+    const allDone = blockDone === block.tasks.length;
+
+    const blockEl = document.createElement("div");
+    blockEl.className = "block" + (allDone ? " all-done" : "");
+
+    const header = document.createElement("div");
+    header.className = "block-header";
+    header.style.borderLeftColor = tc.dot;
+    header.innerHTML = `
+      <div>
+        <div class="block-time" style="color:${tc.dot}">${block.time}</div>
+        <div class="block-name">${allDone ? "✓ " : ""}${block.label}</div>
+      </div>
+      <div class="block-count" style="background:${tc.bg};color:${tc.dot}">${blockDone}/${block.tasks.length}</div>
+    `;
+
+    const tasksEl = document.createElement("div");
+    tasksEl.className = "block-tasks";
+    tasksEl.style.borderLeftColor = tc.dot;
+
+    block.tasks.forEach((task, ti) => {
+      const done = isChecked(mode, bi, ti);
+      const row = document.createElement("div");
+      row.className = "task-row";
+      row.innerHTML = `
+        <div class="task-check ${done ? "done" : ""}" style="${done ? `background:${tc.dot}` : ""}">
+          ${done ? "✓" : ""}
+        </div>
+        <span class="task-label ${done ? "done" : ""}">${task}</span>
+      `;
+      row.addEventListener("click", () => toggleTask(mode, bi, ti));
+      tasksEl.appendChild(row);
+    });
+
+    blockEl.appendChild(header);
+    blockEl.appendChild(tasksEl);
+    container.appendChild(blockEl);
+  });
+}
+
+// Init
+state = loadState();
+setMode("wfh");
+updateClock();
+setInterval(updateClock, 30000);
+</script>
+</body>
+</html>
